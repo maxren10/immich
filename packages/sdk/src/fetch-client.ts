@@ -1252,6 +1252,58 @@ export type QueuesResponseLegacyDto = {
 export type JobCreateDto = {
     name: ManualJobName;
 };
+export type PairStackJobCountsDto = {
+    acknowledged: number;
+    blocked: number;
+    committed: number;
+    dispatchIntent: number;
+    drifted: number;
+    prepared: number;
+    unattributed: number;
+    uncertain: number;
+};
+export type PairStackJobErrorDto = {
+    code: Code;
+    kind: Kind;
+    message: string;
+    recoverable: boolean;
+};
+export type PairStackJobProgressDto = {
+    /** Current progress */
+    current: number;
+    /** Whether the progress has a known total */
+    determinate: boolean;
+    /** Progress percentage */
+    percent: number | null;
+    /** Number of stack POST attempts */
+    posts: number;
+    /** Total progress */
+    total: number;
+};
+export type PairStackJobTaskDto = {
+    concurrency: number;
+    counts: PairStackJobCountsDto;
+    error: (PairStackJobErrorDto) | null;
+    finishedAt: string | null;
+    /** Task ID */
+    id: string;
+    phase: PairStackJobPhase;
+    progress: PairStackJobProgressDto;
+    /** Idempotency request ID */
+    requestId: string;
+    startedAt: string;
+    status: PairStackJobStatus;
+    updatedAt: string;
+};
+export type PairStackJobResponseDto = {
+    task: (PairStackJobTaskDto) | null;
+};
+export type PairStackJobCreateDto = {
+    /** Runner concurrency (1-64) */
+    concurrency?: number;
+    /** Idempotency request ID */
+    requestId: string;
+};
 export type QueueCommandDto = {
     command: QueueCommand;
     /** Force the command execution (if applicable) */
@@ -4818,6 +4870,32 @@ export function createJob({ jobCreateDto }: {
     })));
 }
 /**
+ * Retrieve pair-stack task status
+ */
+export function getPairStackJob(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PairStackJobResponseDto;
+    }>("/jobs/stack", {
+        ...opts
+    }));
+}
+/**
+ * Start or resume pair-stack task
+ */
+export function startPairStackJob({ pairStackJobCreateDto }: {
+    pairStackJobCreateDto: PairStackJobCreateDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 201;
+        data: PairStackJobResponseDto;
+    }>("/jobs/stack", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: pairStackJobCreateDto
+    })));
+}
+/**
  * Run jobs
  */
 export function runQueueCommandLegacy({ name, queueCommandDto }: {
@@ -7377,6 +7455,34 @@ export enum ManualJobName {
     IntegrityMissingFilesDeleteAll = "integrity-missing-files-delete-all",
     IntegrityUntrackedFilesDeleteAll = "integrity-untracked-files-delete-all",
     IntegrityChecksumMismatchDeleteAll = "integrity-checksum-mismatch-delete-all"
+}
+export enum Code {
+    PairStackBlocked = "PAIR_STACK_BLOCKED",
+    PairStackDrifted = "PAIR_STACK_DRIFTED",
+    PairStackUnattributed = "PAIR_STACK_UNATTRIBUTED",
+    PairStackRunnerUnavailable = "PAIR_STACK_RUNNER_UNAVAILABLE",
+    PairStackRunnerRejected = "PAIR_STACK_RUNNER_REJECTED",
+    PairStackFailed = "PAIR_STACK_FAILED"
+}
+export enum Kind {
+    Blocked = "BLOCKED",
+    Drifted = "DRIFTED",
+    Unattributed = "UNATTRIBUTED",
+    Runner = "RUNNER",
+    Internal = "INTERNAL"
+}
+export enum PairStackJobPhase {
+    Inspecting = "INSPECTING",
+    Preparing = "PREPARING",
+    Reconciling = "RECONCILING",
+    Stacking = "STACKING",
+    Finalizing = "FINALIZING"
+}
+export enum PairStackJobStatus {
+    Running = "RUNNING",
+    Succeeded = "SUCCEEDED",
+    Failed = "FAILED",
+    Interrupted = "INTERRUPTED"
 }
 export enum QueueName {
     ThumbnailGeneration = "thumbnailGeneration",

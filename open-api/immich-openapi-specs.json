@@ -6389,6 +6389,108 @@
         "x-immich-state": "Stable"
       }
     },
+    "/jobs/stack": {
+      "get": {
+        "description": "Retrieve the status and progress of the custom JPG + RAW pair-stack runner.",
+        "operationId": "getPairStackJob",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairStackJobResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve pair-stack task status",
+        "tags": [
+          "Jobs"
+        ],
+        "x-immich-admin-only": true,
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "job.read",
+        "x-immich-state": "Alpha"
+      },
+      "post": {
+        "description": "Start or resume the custom JPG + RAW pair-stack runner.",
+        "operationId": "startPairStackJob",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairStackJobCreateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairStackJobResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Start or resume pair-stack task",
+        "tags": [
+          "Jobs"
+        ],
+        "x-immich-admin-only": true,
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "job.create",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/jobs/{name}": {
       "put": {
         "deprecated": true,
@@ -20653,6 +20755,268 @@
         },
         "required": [
           "isOnboarded"
+        ],
+        "type": "object"
+      },
+      "PairStackJobCountsDto": {
+        "properties": {
+          "acknowledged": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "blocked": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "committed": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "dispatchIntent": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "drifted": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "prepared": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "unattributed": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "uncertain": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "acknowledged",
+          "blocked",
+          "committed",
+          "dispatchIntent",
+          "drifted",
+          "prepared",
+          "unattributed",
+          "uncertain"
+        ],
+        "type": "object"
+      },
+      "PairStackJobCreateDto": {
+        "properties": {
+          "concurrency": {
+            "default": 32,
+            "description": "Runner concurrency (1-64)",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "requestId": {
+            "description": "Idempotency request ID",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId"
+        ],
+        "type": "object"
+      },
+      "PairStackJobErrorDto": {
+        "properties": {
+          "code": {
+            "enum": [
+              "PAIR_STACK_BLOCKED",
+              "PAIR_STACK_DRIFTED",
+              "PAIR_STACK_UNATTRIBUTED",
+              "PAIR_STACK_RUNNER_UNAVAILABLE",
+              "PAIR_STACK_RUNNER_REJECTED",
+              "PAIR_STACK_FAILED"
+            ],
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "BLOCKED",
+              "DRIFTED",
+              "UNATTRIBUTED",
+              "RUNNER",
+              "INTERNAL"
+            ],
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 160,
+            "type": "string"
+          },
+          "recoverable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "kind",
+          "message",
+          "recoverable"
+        ],
+        "type": "object"
+      },
+      "PairStackJobPhase": {
+        "enum": [
+          "INSPECTING",
+          "PREPARING",
+          "RECONCILING",
+          "STACKING",
+          "FINALIZING"
+        ],
+        "type": "string"
+      },
+      "PairStackJobProgressDto": {
+        "properties": {
+          "current": {
+            "description": "Current progress",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "determinate": {
+            "description": "Whether the progress has a known total",
+            "type": "boolean"
+          },
+          "percent": {
+            "description": "Progress percentage",
+            "maximum": 100,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
+          },
+          "posts": {
+            "description": "Number of stack POST attempts",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total progress",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "current",
+          "determinate",
+          "percent",
+          "posts",
+          "total"
+        ],
+        "type": "object"
+      },
+      "PairStackJobResponseDto": {
+        "properties": {
+          "task": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PairStackJobTaskDto"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "type": "object"
+      },
+      "PairStackJobStatus": {
+        "enum": [
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "INTERRUPTED"
+        ],
+        "type": "string"
+      },
+      "PairStackJobTaskDto": {
+        "properties": {
+          "concurrency": {
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/PairStackJobCountsDto"
+          },
+          "error": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PairStackJobErrorDto"
+              }
+            ],
+            "nullable": true
+          },
+          "finishedAt": {
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "id": {
+            "description": "Task ID",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/PairStackJobPhase"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/PairStackJobProgressDto"
+          },
+          "requestId": {
+            "description": "Idempotency request ID",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "startedAt": {
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PairStackJobStatus"
+          },
+          "updatedAt": {
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "concurrency",
+          "counts",
+          "error",
+          "finishedAt",
+          "id",
+          "phase",
+          "progress",
+          "requestId",
+          "startedAt",
+          "status",
+          "updatedAt"
         ],
         "type": "object"
       },

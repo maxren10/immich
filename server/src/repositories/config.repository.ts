@@ -8,6 +8,7 @@ import { RedisOptions } from 'ioredis';
 import { CLS_ID, ClsModuleOptions } from 'nestjs-cls';
 import { OpenTelemetryModuleOptions } from 'nestjs-otel/lib/interfaces';
 import { readFileSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { join } from 'node:path';
 import { citiesFile, IWorker } from 'src/constants';
 import { Telemetry } from 'src/decorators';
@@ -125,6 +126,11 @@ export interface EnvData {
     };
   };
 
+  pairStack: {
+    runnerUrl?: string;
+    controlToken?: string;
+  };
+
   noColor: boolean;
   nodeVersion?: string;
 }
@@ -145,6 +151,46 @@ const stagingKeys = {
 
 const WORKER_TYPES = new Set(Object.values(ImmichWorker));
 const TELEMETRY_TYPES = new Set(Object.values(ImmichTelemetry));
+
+const getPairStackRunnerUrl = (value: string | undefined): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('[IMMICH_PAIR_RUNNER_URL] Must be a valid HTTP(S) URL');
+  }
+
+  const hostname = url.hostname.replaceAll(/^\[|\]$/g, '');
+  const loopback =
+    (isIP(hostname) === 4 && hostname.startsWith('127.')) || (isIP(hostname) === 6 && hostname === '::1');
+  if (!loopback) {
+    throw new Error('[IMMICH_PAIR_RUNNER_URL] Must target a loopback address');
+  }
+
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error('[IMMICH_PAIR_RUNNER_URL] Must be a credential-free HTTP(S) URL without query parameters');
+  }
+
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/`;
+  return url.href;
+};
+
+const readPairStackSecret = (file: string | undefined): string | undefined => {
+  if (!file) {
+    return undefined;
+  }
+
+  try {
+    const value = readFileSync(file, 'utf8').trim();
+    return value || undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 const asSet = <T>(value: string | undefined, defaults: T[]) => {
   const values = (value || '').replaceAll(/\s/g, '').split(',').filter(Boolean);
@@ -358,6 +404,12 @@ const getEnv = (): EnvData => {
     storage: {
       ignoreMountCheckErrors: !!dto.IMMICH_IGNORE_MOUNT_CHECK_ERRORS,
       mediaLocation: dto.IMMICH_MEDIA_LOCATION,
+    },
+
+    pairStack: {
+      runnerUrl: getPairStackRunnerUrl(dto.IMMICH_PAIR_RUNNER_URL),
+      controlToken:
+        readPairStackSecret(dto.IMMICH_PAIR_CONTROL_TOKEN_FILE) ?? (dto.IMMICH_PAIR_CONTROL_TOKEN?.trim() || undefined),
     },
 
     telemetry: {

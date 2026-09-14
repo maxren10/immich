@@ -17,6 +17,9 @@ const resetEnv = () => {
     'IMMICH_API_METRICS_PORT',
     'IMMICH_MEDIA_LOCATION',
     'IMMICH_MICROSERVICES_METRICS_PORT',
+    'IMMICH_PAIR_CONTROL_TOKEN',
+    'IMMICH_PAIR_CONTROL_TOKEN_FILE',
+    'IMMICH_PAIR_RUNNER_URL',
     'IMMICH_TELEMETRY_INCLUDE',
     'IMMICH_TELEMETRY_EXCLUDE',
 
@@ -279,6 +282,28 @@ describe('getEnv', () => {
     it('should reject invalid trusted proxies', () => {
       process.env.IMMICH_TRUSTED_PROXIES = '10.1';
       expect(() => getEnv()).toThrow('[IMMICH_TRUSTED_PROXIES] Must be an ip address or ip address range');
+    });
+  });
+
+  describe('pair stack runner', () => {
+    it('is disabled by default', () => {
+      expect(getEnv().pairStack).toEqual({ runnerUrl: undefined, controlToken: undefined });
+    });
+
+    it('accepts a loopback runner and reads the server-side control token', () => {
+      process.env.IMMICH_PAIR_RUNNER_URL = 'http://127.0.0.1:3031';
+      process.env.IMMICH_PAIR_CONTROL_TOKEN = '  control-token  ';
+
+      expect(getEnv().pairStack).toEqual({
+        runnerUrl: 'http://127.0.0.1:3031/',
+        controlToken: 'control-token',
+      });
+    });
+
+    it('rejects a non-loopback runner URL', () => {
+      process.env.IMMICH_PAIR_RUNNER_URL = 'http://runner:3031';
+
+      expect(() => getEnv()).toThrowError('[IMMICH_PAIR_RUNNER_URL] Must target a loopback address');
     });
   });
 

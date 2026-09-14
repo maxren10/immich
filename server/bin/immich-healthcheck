@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# This extensionless executable must remain LF-normalized for Linux images.
+
 log_container_verbose() {
   if [[ $IMMICH_LOG_LEVEL == verbose ]]; then
     echo "$1" > /proc/1/fd/2

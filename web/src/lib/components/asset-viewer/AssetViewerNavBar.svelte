@@ -4,6 +4,7 @@
   import AddToStackAction from '$lib/components/asset-viewer/actions/AddToStackAction.svelte';
   import ArchiveAction from '$lib/components/asset-viewer/actions/ArchiveAction.svelte';
   import DeleteAction from '$lib/components/asset-viewer/actions/DeleteAction.svelte';
+  import DeleteStackAction from '$lib/components/asset-viewer/actions/DeleteStackAction.svelte';
   import KeepThisDeleteOthersAction from '$lib/components/asset-viewer/actions/KeepThisDeleteOthers.svelte';
   import RatingAction from '$lib/components/asset-viewer/actions/RatingAction.svelte';
   import RemoveAssetFromStack from '$lib/components/asset-viewer/actions/RemoveAssetFromStack.svelte';
@@ -131,7 +132,10 @@
     <ActionButton action={Actions.Edit} />
 
     {#if isOwner}
-      <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
+      <DeleteAction {asset} {stack} {onAction} {preAction} {onUndoDelete} />
+      {#if stack}
+        <DeleteStackAction {asset} {stack} {onAction} {preAction} {onUndoDelete} />
+      {/if}
     {/if}
 
     {#if !sharedLink}

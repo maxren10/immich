@@ -1,10 +1,19 @@
-import { AssetVisibility, deleteAssets as deleteBulk, restoreAssets } from '@immich/sdk';
+import {
+  AssetVisibility,
+  deleteAssets as deleteBulk,
+  getStack,
+  restoreAssets,
+  updateStack,
+  type AssetResponseDto,
+  type StackResponseDto,
+} from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import type { StackResponse } from '$lib/utils/asset-utils';
+import { toTimelineAsset } from '$lib/utils/timeline-util';
 import { handleError } from './handle-error';
 
 export type OnDelete = (assetIds: string[]) => void;
@@ -19,16 +28,74 @@ export type OnStack = (result: StackResponse) => void;
 export type OnUnstack = (assets: TimelineAsset[]) => void;
 export type OnSetVisibility = (ids: string[]) => void;
 
+export type OnStackPrimaryChange = (stack: StackResponseDto) => void;
+
+export const toTimelineAssetWithStack = (asset: AssetResponseDto, stack?: StackResponseDto | null): TimelineAsset => {
+  const timelineAsset = toTimelineAsset(asset);
+  if (!stack) {
+    return timelineAsset;
+  }
+
+  return {
+    ...timelineAsset,
+    stack: {
+      id: stack.id,
+      primaryAssetId: stack.primaryAssetId,
+      assetCount: stack.assets.length,
+    },
+  };
+};
+
+export const deleteAssetsStackAware = async (
+  force: boolean,
+  assets: TimelineAsset[],
+  onStackPrimaryChange?: OnStackPrimaryChange,
+) => {
+  const ids = [...new Set(assets.map(({ id }) => id))];
+  const idsToDelete = new Set(ids);
+  const primaryStackIds = [
+    ...new Set(assets.filter(({ id, stack }) => stack?.primaryAssetId === id).map(({ stack }) => stack!.id)),
+  ];
+  const primaryIdsToDeleteLast = new Set<string>();
+
+  for (const stackId of primaryStackIds) {
+    const stack = await getStack({ id: stackId });
+    const survivingAsset = stack.assets.find(({ id }) => !idsToDelete.has(id));
+
+    if (survivingAsset) {
+      const updatedStack = await updateStack({
+        id: stack.id,
+        stackUpdateDto: { primaryAssetId: survivingAsset.id },
+      });
+      onStackPrimaryChange?.(updatedStack);
+    } else if (idsToDelete.has(stack.primaryAssetId)) {
+      primaryIdsToDeleteLast.add(stack.primaryAssetId);
+    }
+  }
+
+  const firstIds = ids.filter((id) => !primaryIdsToDeleteLast.has(id));
+  const lastIds = ids.filter((id) => primaryIdsToDeleteLast.has(id));
+
+  if (firstIds.length > 0) {
+    await deleteBulk({ assetBulkDeleteDto: { ids: firstIds, force } });
+  }
+  if (lastIds.length > 0) {
+    await deleteBulk({ assetBulkDeleteDto: { ids: lastIds, force } });
+  }
+
+  return ids;
+};
+
 export const deleteAssets = async (
   force: boolean,
   onAssetDelete: OnDelete,
   assets: TimelineAsset[],
   onUndoDelete: OnUndoDelete | undefined = undefined,
+  onStackPrimaryChange: OnStackPrimaryChange | undefined = undefined,
 ) => {
   const $t = get(t);
   try {
-    const ids = assets.map((a) => a.id);
-    await deleteBulk({ assetBulkDeleteDto: { ids, force } });
+    const ids = await deleteAssetsStackAware(force, assets, onStackPrimaryChange);
     onAssetDelete(ids);
 
     toastManager.primary(

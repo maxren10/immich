@@ -2,6 +2,7 @@
   import AdminPageLayout from '$lib/components/layouts/AdminPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import JobsPanel from './QueuePanel.svelte';
+  import { pairStackJobManager } from '$lib/managers/pair-stack-job-manager.svelte';
   import { queueManager } from '$lib/managers/queue-manager.svelte';
   import { getQueuesActions } from '$lib/services/queue.service';
   import { type QueueResponseDto } from '@immich/sdk';
@@ -16,7 +17,15 @@
 
   const { data }: Props = $props();
 
-  onMount(() => queueManager.listen());
+  onMount(() => {
+    const stopQueuePolling = queueManager.listen();
+    const stopPairStackPolling = pairStackJobManager.listen();
+
+    return () => {
+      stopQueuePolling();
+      stopPairStackPolling();
+    };
+  });
 
   let queues = $derived<QueueResponseDto[]>(queueManager.queues);
 

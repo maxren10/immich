@@ -87,6 +87,11 @@ export const envData: EnvData = {
     ignoreMountCheckErrors: false,
   },
 
+  pairStack: {
+    runnerUrl: undefined,
+    controlToken: undefined,
+  },
+
   telemetry: {
     apiPort: 8081,
     microservicesPort: 8082,
